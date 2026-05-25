@@ -9,4 +9,4 @@ __pycache__/
 .env.*.local
 
 # Ignorar pasta chamada pratica
-pratica/
+pratica/    
