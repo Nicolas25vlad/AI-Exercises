@@ -25,6 +25,7 @@ class AddTransactionArgs(BaseModel):
     type_id: Optional[int] = Field(default=None, description="ID em transaction_types (1=INCOME, 2=EXPENSES, 3=TRANSFER).")
     type_name: Optional[str] = Field(default=None, description="Nome do tipo: INCOME | EXPENSES | TRANSFER.")
     category_id: Optional[int] = Field(default=None, description="FK de categories (opcional).")
+    category_name: Optional[str] = Field(default=None, description="Nome da categoria (opcional).")
     description: Optional[str] = Field(default=None, description="procure nessa frase uma dessas categoria: (comida, besteira, estudo, férias, transporte, moradia, saúde, lazer, contas, investimento, presente, outros)")
     payment_method: Optional[str] = Field(default=None, description="Forma de pagamento (opcional).")
 
@@ -214,6 +215,7 @@ def add_transaction(
     type_id: Optional[int] = None,
     type_name: Optional[str] = None,
     category_id: Optional[int] = None,
+    category_name: Optional[str] = None,
     description: Optional[str] = None,
     payment_method: Optional[str] = None,
 ) -> dict:
@@ -222,7 +224,7 @@ def add_transaction(
     cur = conn.cursor()
     try:
         resolved_type_id = _resolve_type_id(cur, type_id, type_name)
-        resolve_categorie_id = _resolve_categorie_id(cur, category_id, description)
+        resolve_categorie_id = _resolve_categorie_id(cur, category_id, category_name)
         if not resolved_type_id:
             return {"status": "error", "message": "Tipo invalido (use type_id ou type_name: INCOME/EXPENSES/TRANSFER)."}
 
@@ -351,7 +353,7 @@ def update_transaction(
         resolved_type_id = _resolve_type_id(cur, type_id, type_name) if (type_id or type_name) else None
         resolved_category_id = category_id
         if category_name and not category_id:
-            resolved_category_id = _resolve_categorie_id(cur, category_name)
+            resolved_category_id = _resolve_categorie_id(cur, category_id, category_name)
 
         # Montar SET dinâmico
         sets = []
