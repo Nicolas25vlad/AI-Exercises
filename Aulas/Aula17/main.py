@@ -73,6 +73,7 @@ faq_app = create_agent(
 set_apps(router_app, financeiro_app, agenda_app, faq_app, orquestrador_app)
 
 def executar_fluxo_acessor(pergunta_usuario: str, session_id: str) -> str:
+    salvar_mensagem(session_id, "usuario", pergunta_usuario)
     # Anonimizar a entrada antes de qualquer verificação
     mensagem_anonimizada, mapa_pii = anonimizar_entrada(pergunta_usuario)
     
@@ -80,7 +81,9 @@ def executar_fluxo_acessor(pergunta_usuario: str, session_id: str) -> str:
     verificacao = guardrail_entrada(mensagem_anonimizada)
     
     if verificacao["bloqueado"]:
-        return f"[BLOQUEADO] {verificacao['mensagem']}"
+        resposta_bloqueada = f"[BLOQUEADO] {verificacao['mensagem']}"
+        salvar_mensagem(session_id, "assistente", resposta_bloqueada)
+        return resposta_bloqueada
     
     # Estado inicial com MessagesState
     estado_inicial = {
@@ -116,8 +119,9 @@ def executar_fluxo_acessor(pergunta_usuario: str, session_id: str) -> str:
     
     # Aplicar guardrail de saída (compliance e remoção de PII)
     saida_revisada = guardrail_saida(resposta_final, mapa_pii, restaurar_pii=False)
-    
-    return saida_revisada["conteudo"]
+    resposta_usuario = saida_revisada["conteudo"]
+    salvar_mensagem(session_id, "assistente", resposta_usuario)
+    return resposta_usuario
 
 
 session_id = "sessao_teste"
@@ -127,6 +131,7 @@ iniciar_sessao(session_id)
 while True:
     user_input = input("> ")
     if user_input.lower() in ["sair", "exit", "quit"]:
+        encerrar_sessao(session_id)
         print("Encerrando a conversa. Até mais!")
         break
     
