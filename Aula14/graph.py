@@ -1,3 +1,4 @@
+# type: ignore
 from langgraph.graph import StateGraph, MessagesState, END
 from langgraph.checkpoint.memory import MemorySaver
 import operator

@@ -1,5 +1,5 @@
 #docker exec -it gemma-ia ollama pull gemma:2b
-
+# type: ignore
 from dotenv import load_dotenv
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -16,6 +16,8 @@ from prompts import (
     FAQ_PROMPT_COMPLETO,
 )
 from graph import FLUXO_AGENTES, set_apps
+from guardrail import guardrail_entrada, guardrail_saida, anonimizar_entrada
+from langchain.schema import RemoveMessages 
 
 load_dotenv()
 

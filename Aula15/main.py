@@ -1,5 +1,5 @@
 #docker exec -it gemma-ia ollama pull gemma:2b
-
+# type: ignore
 from dotenv import load_dotenv
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -16,6 +16,8 @@ from prompts import (
     FAQ_PROMPT_COMPLETO,
 )
 from graph import FLUXO_AGENTES, set_apps
+from guardrail import guardrail_entrada, guardrail_saida, anonimizar_entrada
+from langchain.schema import RemoveMessages 
 
 load_dotenv()
 
@@ -70,9 +72,18 @@ faq_app = create_agent(
 set_apps(router_app, financeiro_app, agenda_app, faq_app, orquestrador_app)
 
 def executar_fluxo_acessor(pergunta_usuario: str, session_id: str) -> str:
+    # Anonimizar a entrada antes de qualquer verificação
+    mensagem_anonimizada, mapa_pii = anonimizar_entrada(pergunta_usuario)
+    
+    # Aplicar guardrail de entrada (validação de segurança)
+    verificacao = guardrail_entrada(mensagem_anonimizada)
+    
+    if verificacao["bloqueado"]:
+        return f"[BLOQUEADO] {verificacao['mensagem']}"
+    
     # Estado inicial com MessagesState
     estado_inicial = {
-        "messages": [{"role": "human", "content": pergunta_usuario}],
+        "messages": [{"role": "human", "content": mensagem_anonimizada}],
         "session_id": session_id,
         "agentes_chamados": [],
         "rota": "",
@@ -90,18 +101,22 @@ def executar_fluxo_acessor(pergunta_usuario: str, session_id: str) -> str:
     messages = estado_final.get("messages", [])
     resposta = ""
     for msg in reversed(messages):
-        # Tenta diferentes formatos de mensagem
-        if hasattr(msg, 'content') and msg.content:  # AIMessage object
+        if hasattr(msg, 'content') and msg.content:
             resposta = msg.content
             break
-        elif isinstance(msg, dict) and msg.get("role") == "assistant":  # dict format
+        elif isinstance(msg, dict) and msg.get("role") == "assistant":
             resposta = msg.get("content", "")
             break
-        elif isinstance(msg, dict) and msg.get("type") == "ai":  # outro formato
+        elif isinstance(msg, dict) and msg.get("type") == "ai":
             resposta = msg.get("content", "")
             break
     
-    return resposta if resposta else "Não foi possível obter uma resposta."
+    resposta_final = resposta if resposta else "Não foi possível obter uma resposta."
+    
+    # Aplicar guardrail de saída (compliance e remoção de PII)
+    saida_revisada = guardrail_saida(resposta_final, mapa_pii, restaurar_pii=False)
+    
+    return saida_revisada["conteudo"]
 
 
 while True:
