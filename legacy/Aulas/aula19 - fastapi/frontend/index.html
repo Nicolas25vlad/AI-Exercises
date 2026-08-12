@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        async function enviarRecado() {
+            const autor = document.getElementById('autor').value;
+            const mensagem = document.getElementById('mensagem').value;
+            const sessaoId = document.getElementById('sessaoId').value;
+
+            const response = await fetch(`/recados/salvar/${sessaoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ autor, mensagem })
+            });
+
+            const data = await response.json();
+            console.log(data);
+        }
+
+        async function listarRecados() {
+            const sessaoId = document.getElementById('sessaoId').value;
+
+            const response = await fetch(`/recados/listar/${sessaoId}`);
+            const data = await response.json();
+            console.log(data);
+        }
+    </script>
+
+    
+    <h1>Recados</h1>
+    <div>
+        <label for="sessaoId">Sessão ID:</label>
+        <input type="text" id="sessaoId" placeholder="Digite o ID da sessão">
+    </div>
+    <div>
+        <label for="autor">Autor:</label>
+        <input type="text" id="autor" placeholder="Seu nome">
+    </div>
+    <div>
+        <label for="mensagem">Mensagem:</label>
+        <input type="text" id="mensagem" placeholder="Escreva um recado">
+    </div>
+    <div>
+        <button onclick="enviarRecado()">Enviar recado</button>
+        <button onclick="listarRecados()">Listar recados</button>
+    </div>
+    <div id="resultado" style="margin-top:1rem;"></div>
+</body>
+</html>

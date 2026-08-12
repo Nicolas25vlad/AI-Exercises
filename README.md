@@ -1,7 +1,10 @@
 # AI-Exercises
 
-Organização do projeto:
+Organizacao do projeto:
 
-- `Aulas/`: aulas e evoluções por aula (`Aula7` até `Aula17`, `aula5`, `aula6`)
-- `Praticas/`: exercícios práticos e materiais de prática
-- `Extras/`: arquivos soltos e aulas auxiliares
+- `main/`: aula atual e ponto principal de execucao do projeto
+- `legacy/`: aulas, praticas e materiais anteriores
+
+O rastreamento das aulas e feito pelo historico do Git. Cada commit registra
+uma evolucao do projeto; consulte `git log --oneline` para acompanhar a
+sequencia.
