@@ -12,7 +12,7 @@ from langchain_groq import ChatGroq
 from app.config import GROQ_API_KEY
 
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile", 
+    model="openai/gpt-oss-120b",
     temperature=0.0, 
     api_key=GROQ_API_KEY
 )
@@ -28,6 +28,8 @@ PII = [
     ("CONTA",    r"\d{4,6}-\d{1}"),
     ("CARTAO",   r"\d{4}\s?\d{4}\s?\d{4}\s?\d{4}"),
 ]
+
+_EMAILS_PUBLICOS = {"suporte@assessoria.ai"}
 
 # ==============================================================================
 # HELPERS
@@ -176,7 +178,15 @@ def guardrail_saida(resposta, mapa_pii, restaurar_pii=False):
     """
     # 1. Remove PII que o modelo tenha gerado
     for tipo, padrao in PII:
-        resposta = re.sub(padrao, f"[{tipo} OMITIDO]", resposta)
+        resposta = re.sub(
+            padrao,
+            lambda match: (
+                match.group(0)
+                if tipo == "EMAIL" and match.group(0).lower() in _EMAILS_PUBLICOS
+                else f"[{tipo} OMITIDO]"
+            ),
+            resposta,
+        )
 
     # 2. Resolve tokens de PII da entrada
     resposta = desanonimizar_saida(resposta, mapa_pii, restaurar=restaurar_pii)

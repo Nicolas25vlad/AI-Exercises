@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.graph import executar_fluxo
 from app.schemas import ChatRequest, ChatResponse
 
 router = APIRouter(tags=["chat"])
@@ -7,10 +8,8 @@ router = APIRouter(tags=["chat"])
 
 @router.post("/chat", response_model=ChatResponse)
 def conversar(requisicao: ChatRequest) -> ChatResponse:
-    return ChatResponse(
-        resposta=(
-            f"Recebi sua mensagem na sessão '{requisicao.session_id}': "
-            f'"{requisicao.pergunta}". O grafo ainda não está ligado nesta rota.'
-        ),
-        agentes_chamados=["eco_de_teste"],
+    resposta, agentes_chamados = executar_fluxo(
+        requisicao.pergunta,
+        requisicao.session_id,
     )
+    return ChatResponse(resposta=resposta, agentes_chamados=agentes_chamados)

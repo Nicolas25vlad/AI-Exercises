@@ -8,7 +8,7 @@ from app.agents import agenda_app, faq_app, financeiro_app, orquestrador_app, ro
 from app.guardrail import anonimizar_entrada, guardrail_entrada, guardrail_saida
 from app.memory import salvar_mensagem
 
-
+    
 class Estado(MessagesState):
     session_id: str
     agentes_chamados: Annotated[list[str], operator.add]

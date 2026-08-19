@@ -5,7 +5,7 @@ from langchain.tools import tool
 from pydantic import BaseModel, Field
 from app.tools.db import get_conn
 
-
+    
 
 # Essa classe garante que o objeto de Python passe todos esses campos
 class AddTransactionArgs(BaseModel):
