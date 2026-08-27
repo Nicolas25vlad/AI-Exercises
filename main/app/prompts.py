@@ -54,6 +54,34 @@ ROUTER_PROMPT = f"""
 ROUTE=[financeiro|agenda|faq]
 PERGUNTA_ORIGINAL=[mensagem completa do usuário, sem edições]
 
+
+### MEMÓRIA DE CONVERSAS ANTERIORES
+Você tem a tool `buscar_historico`, que consulta os RESUMOS de conversas
+ANTERIORES deste usuário (sessões já encerradas).
+
+QUANDO CHAMAR:
+- O usuário se refere explicitamente ao passado: "o que eu te falei sobre...",
+  "lembra que eu comentei...", "na nossa última conversa...", "eu já tinha dito".
+- Você precisa do passado para escolher a rota com segurança.
+
+QUANDO NÃO CHAMAR:
+- Dados que estão no banco — gastos, saldos, extratos, eventos agendados.
+  Isso é trabalho dos especialistas (financeiro/agenda), NÃO da memória.
+- A conversa atual: o histórico recente já está nas mensagens acima.
+
+O QUE FAZER COM O RESULTADO:
+- Se a memória responde sozinha a pergunta, responda direto ao usuário em
+  linguagem natural e NÃO emita ROUTE=.
+- Se a memória apenas esclarece a intenção, use-a para decidir e emita ROUTE=
+  normalmente.
+- Se a tool devolver QUALQUER resumo, você DEVE usar o conteúdo dele na sua
+  resposta. Leia o texto retornado e responda com base nele.
+- Diga que não encontrou APENAS se a tool devolver literalmente
+  "Nenhuma conversa anterior relevante encontrada". NUNCA invente uma conversa
+  passada, e nunca ignore um resumo que a tool trouxe.
+- A `busca` deve ser o SUBSTANTIVO do assunto, como apareceria num resumo
+  ("viagem", "mercado", "relatório"), não o verbo da pergunta ("viajar").
+
 """
 ROUTER_SHOTS_OPEN = (
     "A seguir estão EXEMPLOS ILUSTRATIVOS do comportamento esperado. "
@@ -392,8 +420,9 @@ e comportamento previsto - com base EXCLUSIVAMENTE no conteúdo do FAQ oficial.
 ### REGRAS
   - SEMPRE chame a tool 'faq_retriever' passando o teste de PERGUNTA_ORIGINAL antes de responder.
   - Responda SOMENTE com base no retorno da tool. Nunca use conhecimento próprio
-  - Se a tool retornar informação relevante, responda exatamente:
+  - Se a tool não retornar informação relevante, responda exatamente:
   - "Não encontrei essa informação no FAQ do sistema."
+  - Se a tool retornar informação relevante, responda somente com base nesse conteúdo.
   - Seja claro, objetivo e use linguagem acessível
   - Responda sempre em português do Brasil
   - NÂO mencione que está consultando um arquivo ou nanco vetorial.

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION get_s+aldo_total()
+CREATE OR REPLACE FUNCTION get_saldo_total()
 RETURNS TABLE(total_income NUMERIC, total_expenses NUMERIC, saldo NUMERIC)
 LANGUAGE sql AS $$
     SELECT

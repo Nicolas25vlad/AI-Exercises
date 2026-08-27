@@ -9,19 +9,27 @@ from app.prompts import (
     ROUTER_PROMPT_COMPLETO,
 )
 from app.tools.faq import faq_retriever
+from app.tools.memoria import TOOLS_MEMORIA
+from langchain_core.runnables import RunnableConfig
 from app.tools.financeiro import TOOLS
 
 TOOLS_AGENDA = []
 
-router_app = create_agent(model=llm_rapido, system_prompt=ROUTER_PROMPT_COMPLETO)
+router_app = create_agent(
+    model=llm_rapido, 
+    tools=TOOLS_MEMORIA,
+    system_prompt=ROUTER_PROMPT_COMPLETO
+    )
+
+
 financeiro_app = create_agent(
     model=llm_especialista,
-    tools=TOOLS,
+    tools=TOOLS+TOOLS_MEMORIA,
     system_prompt=FINANCEIRO_PROMPT_COMPLETO,
 )
 agenda_app = create_agent(
     model=llm_especialista,
-    tools=TOOLS_AGENDA,
+    tools=TOOLS_AGENDA+TOOLS_MEMORIA,
     system_prompt=AGENDA_PROMPT_COMPLETO,
 )
 orquestrador_app = create_agent(
