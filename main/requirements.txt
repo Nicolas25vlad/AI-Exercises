@@ -13,3 +13,4 @@ pypdf>=5,<7
 psycopg2-binary>=2.9,<3
 pymongo>=4,<5
 pydantic>=2,<3
+qdrant-client>=1.1,<2

@@ -11,6 +11,7 @@ from app.memory import salvar_mensagem
     
 class Estado(MessagesState):
     session_id: str
+    user_id: str
     agentes_chamados: Annotated[list[str], operator.add]
     rota: str
     mapa_pii: dict[str, str]
@@ -41,7 +42,12 @@ def decidir_pos_guardrail_entrada(estado: Estado) -> str:
 def no_roteador(estado: Estado) -> dict:
     saida = router_app.invoke(
         {"messages": estado["messages"]},
-        config={"configurable": {"thread_id": estado["session_id"]}},
+        config={
+            "configurable": {
+                "thread_id": estado["session_id"],
+                "user_id": estado["user_id"],
+            }
+        },
     )
     texto = _texto(saida["messages"][-1])
     rota = "fim"
@@ -59,7 +65,12 @@ def no_roteador(estado: Estado) -> dict:
 def no_financeiro(estado: Estado) -> dict:
     saida = financeiro_app.invoke(
         {"messages": estado["messages"]},
-        config={"configurable": {"thread_id": estado["session_id"]}},
+        config={
+            "configurable": {
+                "thread_id": estado["session_id"],
+                "user_id": estado["user_id"],
+            }
+        },
     )
     return {
         "saida_especialista": _texto(saida["messages"][-1]),
@@ -70,7 +81,12 @@ def no_financeiro(estado: Estado) -> dict:
 def no_agenda(estado: Estado) -> dict:
     saida = agenda_app.invoke(
         {"messages": estado["messages"]},
-        config={"configurable": {"thread_id": estado["session_id"]}},
+        config={
+            "configurable": {
+                "thread_id": estado["session_id"],
+                "user_id": estado["user_id"],
+            }
+        },
     )
     return {
         "saida_especialista": _texto(saida["messages"][-1]),
@@ -81,7 +97,12 @@ def no_agenda(estado: Estado) -> dict:
 def no_faq(estado: Estado) -> dict:
     saida = faq_app.invoke(
         {"messages": estado["messages"]},
-        config={"configurable": {"thread_id": estado["session_id"]}},
+        config={
+            "configurable": {
+                "thread_id": estado["session_id"],
+                "user_id": estado["user_id"],
+            }
+        },
     )
     texto = _texto(saida["messages"][-1])
     return {
@@ -94,7 +115,12 @@ def no_faq(estado: Estado) -> dict:
 def no_orquestrador(estado: Estado) -> dict:
     saida = orquestrador_app.invoke(
         {"messages": [{"role": "human", "content": estado["saida_especialista"]}]},
-        config={"configurable": {"thread_id": estado["session_id"]}},
+        config={
+            "configurable": {
+                "thread_id": estado["session_id"],
+                "user_id": estado["user_id"],
+            }
+        },
     )
     return {
         "agentes_chamados": ["orquestrador"],
@@ -151,13 +177,16 @@ grafo.add_edge("guardrail_saida", END)
 fluxo_agentes = grafo.compile(checkpointer=MemorySaver())
 
 
-def executar_fluxo(pergunta: str, session_id: str) -> tuple[str, list[str]]:
-    salvar_mensagem(session_id, "usuario", pergunta)
+def executar_fluxo(
+    pergunta: str, session_id: str, user_id: str = "usuario_teste"
+) -> tuple[str, list[str]]:
+    salvar_mensagem(session_id, "usuario", pergunta, user_id=user_id)
     mensagem, mapa_pii = anonimizar_entrada(pergunta)
     estado = fluxo_agentes.invoke(
         {
             "messages": [{"role": "human", "content": mensagem}],
             "session_id": session_id,
+            "user_id": user_id,
             "agentes_chamados": [],
             "rota": "",
             "mapa_pii": mapa_pii,
@@ -165,8 +194,10 @@ def executar_fluxo(pergunta: str, session_id: str) -> tuple[str, list[str]]:
             "saida_especialista": "",
             "resposta_final": "",
         },
-        config={"configurable": {"thread_id": session_id}},
+        config={
+            "configurable": {"thread_id": session_id, "user_id": user_id}
+        },
     )
     resposta = estado.get("resposta_final") or "Não foi possível obter uma resposta."
-    salvar_mensagem(session_id, "assistente", resposta)
+    salvar_mensagem(session_id, "assistente", resposta, user_id=user_id)
     return resposta, estado.get("agentes_chamados", [])

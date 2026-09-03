@@ -1,25 +1,7 @@
-"""
-Tool de memória de longo prazo — consulta conversas ANTERIORES do usuário.
-
-Migração de tool_mongodb.py (raiz) para dentro de app/tools/.
-"""
-
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 
 from app.memory import recuperar_historico
-
-# ==============================================================================
-# POR QUE user_id E NÃO session_id
-# ------------------------------------------------------------------------------
-# O front gera um UUID novo a cada "nova sessão". Esse UUID é a CONVERSA
-# (vira thread_id do checkpointer). Se buscarmos conversas anteriores por ele,
-# o resultado é sempre vazio: cada conversa tem um id diferente da anterior.
-#
-# Para achar o passado precisamos de um identificador ESTÁVEL do usuário —
-# o user_id. Enquanto o front não mandar um, o fallback para thread_id mantém
-# a tool funcionando (e é o suficiente para testar com um id fixo à mão).
-# ==============================================================================
 
 
 @tool
@@ -46,9 +28,15 @@ def buscar_historico(busca: str, config: RunnableConfig) -> str:
     if not historico:
         return "Nenhuma conversa anterior relevante encontrada."
 
-    return "\n\n".join(
-        f"[{h['iniciada_em']:%d/%m/%Y}] {h['resumo']}" for h in historico
-    )
+    linhas = []
+    for h in historico:
+        data = h["iniciada_em"]
+        if hasattr(data, "strftime"):
+            data_fmt = data.strftime("%d/%m/%Y")
+        else:
+            data_fmt = str(data)[:10]
+        linhas.append(f"[{data_fmt}] {h['resumo']}")
+    return "\n\n".join(linhas)
 
 
 TOOLS_MEMORIA = [buscar_historico]

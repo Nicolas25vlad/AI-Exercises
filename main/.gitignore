@@ -1,3 +1,4 @@
 .env
 __pycache__/
 .venv/
+.faq_ingest_metadata.json
