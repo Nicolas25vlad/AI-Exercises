@@ -200,4 +200,5 @@ def executar_fluxo(
     )
     resposta = estado.get("resposta_final") or "Não foi possível obter uma resposta."
     salvar_mensagem(session_id, "assistente", resposta, user_id=user_id)
-    return resposta, estado.get("agentes_chamados", [])
+    agentes = list(dict.fromkeys(estado.get("agentes_chamados", [])))
+    return resposta, agentes

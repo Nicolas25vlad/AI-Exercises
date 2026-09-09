@@ -40,7 +40,11 @@ class SaldoDiarioArgs(BaseModel):
     source_text: str = Field(..., description="Texto original do usuario.")
     occurred_at: Optional[str] = Field(
         default=None,
-        description="Data ISO 8601 do dia a consultar; se ausente, usa o dia atual."
+        description="Data ISO 8601 ou mês YYYY-MM do período; se ausente, usa a data atual."
+    )
+    periodo: str = Field(
+        default="dia",
+        description="Período do saldo: dia, mes ou ano. Use mes para gasto mensal."
     )
 
 
@@ -73,16 +77,34 @@ def saldo_total(source_text: str) -> dict:
 
 
 @tool("saldo_diario", args_schema=SaldoDiarioArgs)
-def saldo_diario(source_text: str, occurred_at: Optional[str] = None) -> dict:
-    """Retorna entradas, despesas e saldo liquido de um dia especifico."""
+def saldo_diario(
+    source_text: str,
+    occurred_at: Optional[str] = None,
+    periodo: str = "dia",
+) -> dict:
+    """Retorna entradas, despesas e saldo de um dia, mês ou ano."""
     conn = get_conn()
     cur = conn.cursor()
     try:
-        #MESMA COISA DO SALDO TOTAL, SÓ QUE CHAMANDO A FUNÇÃO get_saldo_diario, QUE RECEBE UM PARAMETRO DE DATA PARA CALCULAR O SALDO DO DIA, SE O PARAMETRO OCURRED_AT FOR NULO, ELE CALCULA O SALDO DO DIA ATUAL
-        if occurred_at:
-            cur.execute("SELECT total_income, total_expenses, saldo FROM get_saldo_diario(%s::date);", (occurred_at,))
-        else:
-            cur.execute("SELECT total_income, total_expenses, saldo FROM get_saldo_diario();")
+        unidade = {"dia": "day", "mes": "month", "mês": "month", "ano": "year"}.get(
+            periodo.strip().lower(), "day"
+        )
+        if occurred_at and len(occurred_at) == 7:
+            occurred_at += "-01"
+        cur.execute(
+            f"""
+            SELECT
+                COALESCE(SUM(CASE WHEN tt.type = 'INCOME' THEN t.amount ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN tt.type = 'EXPENSES' THEN t.amount ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN tt.type = 'INCOME' THEN t.amount ELSE -t.amount END), 0)
+            FROM transactions t
+            JOIN transaction_types tt ON tt.id = t.type
+            WHERE t.occurred_at >= date_trunc('{unidade}', COALESCE(%s::date, CURRENT_DATE))
+              AND t.occurred_at < date_trunc('{unidade}', COALESCE(%s::date, CURRENT_DATE))
+                  + INTERVAL '1 {unidade}';
+            """,
+            (occurred_at, occurred_at),
+        )
         row = cur.fetchone()
         total_income = float(row[0])
         total_expenses = float(row[1])
@@ -153,6 +175,7 @@ def search_transactions(
         if not resolved_type_id:
             return {"status": "error", "message": "Tipo inválido (INCOME/EXPENSES/TRANSFER)."}
         if occurred_at:
+            occurred_at = f"{occurred_at}-01" if len(occurred_at) == 7 else occurred_at
             cur.execute(
                 """
                 SELECT id, amount, type, category_id, description, payment_method, occurred_at

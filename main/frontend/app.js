@@ -94,7 +94,9 @@ function adicionarMensagem({ tipo, texto, agentes }) {
 
   const bubble = document.createElement("div");
   bubble.className = "message__bubble";
-  bubble.innerHTML = escaparHtml(texto);
+  bubble.innerHTML = tipo === "assistant"
+    ? DOMPurify.sanitize(marked.parse(texto))
+    : escaparHtml(texto);
   wrapper.appendChild(bubble);
 
   if (agentes && agentes.length > 0) {

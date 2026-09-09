@@ -37,14 +37,9 @@ from qdrant_client import models
 from app.config import MONGODB_URI
 from app.vectorstore import qdrant, gerar_embedding, COLLECTION_MEMORIA
 
-_mongo      = MongoClient(MONGODB_URI)
+_mongo      = MongoClient(MONGODB_URI, connect=False)
 db          = _mongo["assessor"]
 col_sessoes = db["sessoes"]
-
-col_sessoes.create_index("session_id")
-col_sessoes.create_index("user_id")
-col_sessoes.create_index("iniciada_em")
-
 
 _PROMPT_RESUMO = """\
 Você é um assistente que resume conversas de assessoria financeira e agenda.
@@ -99,6 +94,10 @@ def _doc_id_da_sessao(session_id: str) -> str | None:
 def iniciar_sessao(session_id: str, user_id: str = "usuario_teste") -> None:
     if _doc_id_da_sessao(session_id):
         return
+
+    col_sessoes.create_index("session_id")
+    col_sessoes.create_index("user_id")
+    col_sessoes.create_index("iniciada_em")
 
     doc_id = str(uuid.uuid4())
     agora  = _agora()
