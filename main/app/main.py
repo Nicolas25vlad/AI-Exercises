@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 
 from app.config import FRONTEND_DIR, validar_config
-from app.routes import chat, sessions
+from app.routes import chat, perfil, sessions
 
 for _problema in validar_config():
     print(f"[config] ATENÇÃO: {_problema}")
@@ -18,6 +19,12 @@ app.add_middleware(
 )
 app.include_router(chat.router)
 app.include_router(sessions.router)
+app.include_router(perfil.router)
+
+
+@app.get("/", include_in_schema=False)
+def abrir_perfil() -> RedirectResponse:
+    return RedirectResponse("/perfil.html")
 
 
 @app.get("/health")

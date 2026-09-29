@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class ChatRequest(BaseModel):
@@ -36,3 +38,24 @@ class SessionResponse(BaseModel):
 class HistoryResponse(BaseModel):
     session_id: str
     mensagens: list[dict]
+
+
+class PerfilRequest(BaseModel):
+    user_id: str = Field(..., min_length=1)
+    renda_mensal: float = Field(..., gt=0)
+    gasto_fixo_mensal: float = Field(..., ge=0)
+    horizonte_meses: int = Field(..., ge=1, le=120)
+    perfil_investidor: Literal["conservador", "moderado", "arrojado"]
+    restricoes: list[str] = Field(..., min_length=1, max_length=5)
+
+    @model_validator(mode="after")
+    def validar_gasto_menor_que_renda(self):
+        if self.gasto_fixo_mensal >= self.renda_mensal:
+            raise ValueError("gasto_fixo_mensal deve ser menor que renda_mensal")
+        if any(not restricao.strip() for restricao in self.restricoes):
+            raise ValueError("restricoes não podem ser vazias")
+        return self
+
+
+class PerfilResponse(PerfilRequest):
+    pass

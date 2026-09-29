@@ -12,6 +12,7 @@ from app.tools.faq import faq_retriever
 from app.tools.memoria import TOOLS_MEMORIA
 from langchain_core.runnables import RunnableConfig
 from app.tools.financeiro import TOOLS
+from app.tools.perfil import consultar_perfil
 
 TOOLS_AGENDA = []
 
@@ -24,7 +25,7 @@ router_app = create_agent(
 
 financeiro_app = create_agent(
     model=llm_especialista,
-    tools=TOOLS+TOOLS_MEMORIA,
+    tools=TOOLS+[consultar_perfil]+TOOLS_MEMORIA,
     system_prompt=FINANCEIRO_PROMPT_COMPLETO,
 )
 agenda_app = create_agent(

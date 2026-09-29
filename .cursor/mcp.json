@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "assessor-financeiro": {
+      "command": "${workspaceFolder}/main/venv/Scripts/python.exe",
+      "args": ["${workspaceFolder}/main/app/mcp_server.py"]
+    }
+  }
+}

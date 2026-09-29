@@ -1,4 +1,6 @@
+import json
 import operator
+import re
 from typing import Annotated
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -7,6 +9,7 @@ from langgraph.graph import END, MessagesState, StateGraph
 from app.agents import agenda_app, faq_app, financeiro_app, orquestrador_app, router_app
 from app.guardrail import anonimizar_entrada, guardrail_entrada, guardrail_saida
 from app.memory import salvar_mensagem
+from app.perfil import consultar_perfil
 
     
 class Estado(MessagesState):
@@ -22,6 +25,46 @@ class Estado(MessagesState):
 
 def _texto(mensagem) -> str:
     return mensagem.content if hasattr(mensagem, "content") else mensagem.get("content", "")
+
+
+def _pergunta_sobre_perfil(pergunta: str) -> bool:
+    return bool(re.search(
+        r"renda|sal[aá]rio|gasto\s+(fixo\s+)?mensal|horizonte|perfil\s+investidor|restri",
+        pergunta.lower(),
+    ))
+
+
+def _resposta_perfil(perfil: dict, pergunta: str) -> str:
+    if perfil["status"] != "ok":
+        return json.dumps({
+            "dominio": "financeiro",
+            "intencao": "consultar",
+            "resposta": perfil["mensagem"],
+            "recomendacao": "Acesse a tela Perfil para cadastrar seus dados.",
+        }, ensure_ascii=False)
+
+    dados = perfil["perfil"]
+    texto = pergunta.lower()
+    partes = []
+    if "renda" in texto or "salário" in texto or "salario" in texto:
+        partes.append(f"Sua renda mensal é de R$ {dados['renda_mensal']:.2f}.")
+    if "gasto" in texto:
+        partes.append(f"Seu gasto fixo mensal é de R$ {dados['gasto_fixo_mensal']:.2f}.")
+    if "horizonte" in texto or "tempo" in texto:
+        partes.append(f"Seu horizonte é de {dados['horizonte_meses']} meses.")
+    if "perfil" in texto or "investidor" in texto:
+        partes.append(f"Seu perfil investidor é {dados['perfil_investidor']}.")
+    if "restri" in texto:
+        restricoes = perfil["restricoes_relevantes"] or dados["restricoes"]
+        partes.append("Suas restrições são: " + "; ".join(restricoes) + ".")
+    if not partes:
+        partes.append(f"Seu perfil está cadastrado com horizonte de {dados['horizonte_meses']} meses.")
+    return json.dumps({
+        "dominio": "financeiro",
+        "intencao": "consultar",
+        "resposta": " ".join(partes),
+        "recomendacao": "",
+    }, ensure_ascii=False)
 
 
 def no_guardrail_entrada(estado: Estado) -> dict:
@@ -63,8 +106,16 @@ def no_roteador(estado: Estado) -> dict:
 
 
 def no_financeiro(estado: Estado) -> dict:
+    mensagens = estado["messages"]
+    pergunta = _texto(mensagens[-1])
+    if _pergunta_sobre_perfil(pergunta):
+        perfil = consultar_perfil(estado["user_id"], pergunta)
+        return {
+            "saida_especialista": _resposta_perfil(perfil, pergunta),
+            "agentes_chamados": ["financeiro"],
+        }
     saida = financeiro_app.invoke(
-        {"messages": estado["messages"]},
+        {"messages": mensagens},
         config={
             "configurable": {
                 "thread_id": estado["session_id"],
