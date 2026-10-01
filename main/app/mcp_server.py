@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
@@ -18,15 +19,17 @@ from app.tools.financeiro import (
     total_balance as _total_balance,
     update_transaction as _update_transaction,
 )
+from app.tools.agenda import add_event as _add_event, query_events as _query_events
 
 mcp = MCPServer(
     "assessor-financeiro",
     version="1.0.0",
-    instructions="Ferramentas financeiras do Assessor. Valores monetários são em reais.",
+    instructions="Ferramentas financeiras e de agenda do Assessor. Valores monetários são em reais.",
 )
 
 READ_ONLY = ToolAnnotations(read_only_hint=True)
 WRITES = ToolAnnotations(read_only_hint=False, destructive_hint=False)
+AGENDA_USER_ID = os.getenv("AGENDA_USER_ID", "usuario_teste")
 
 
 @mcp.tool(
@@ -121,6 +124,42 @@ def update_transaction(
             "payment_method": payment_method,
             "occurred_at": occurred_at,
         }
+    )
+
+
+@mcp.tool(
+    title="Consultar agenda",
+    description="Lista compromissos por data local YYYY-MM-DD e/ou trecho do título.",
+    annotations=READ_ONLY,
+)
+def query_events(
+    date_local: Annotated[Optional[str], Field(description="Data local YYYY-MM-DD.")] = None,
+    text: Annotated[Optional[str], Field(description="Trecho do título.")] = None,
+    limit: Annotated[int, Field(ge=1, le=200, description="Máximo de resultados.")] = 50,
+) -> dict | list:
+    return _query_events.invoke(
+        {"date_local": date_local, "text": text, "limit": limit},
+        config={"configurable": {"user_id": AGENDA_USER_ID}},
+    )
+
+
+@mcp.tool(
+    title="Registrar compromisso",
+    description="Salva compromisso no banco local. Datas ISO 8601 com fuso.",
+    annotations=WRITES,
+)
+def add_event(
+    title: Annotated[str, Field(min_length=1, description="Título do compromisso.")],
+    start_time: Annotated[str, Field(description="Início ISO 8601 com fuso.")],
+    end_time: Annotated[str, Field(description="Fim ISO 8601 com fuso.")],
+    source_text: Annotated[str, Field(min_length=1, description="Pedido original.")],
+    location: Annotated[Optional[str], Field(description="Local.")] = None,
+    notes: Annotated[Optional[str], Field(description="Observações.")] = None,
+) -> dict:
+    return _add_event.invoke(
+        {"title": title, "start_time": start_time, "end_time": end_time,
+         "source_text": source_text, "location": location, "notes": notes},
+        config={"configurable": {"user_id": AGENDA_USER_ID}},
     )
 
 

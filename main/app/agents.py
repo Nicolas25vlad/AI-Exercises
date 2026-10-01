@@ -13,8 +13,9 @@ from app.tools.memoria import TOOLS_MEMORIA
 from langchain_core.runnables import RunnableConfig
 from app.tools.financeiro import TOOLS
 from app.tools.perfil import consultar_perfil
+from app.tools.agenda import TOOLS_AGENDA
+from app.tools.calendario_google import TOOLS_GOOGLE
 
-TOOLS_AGENDA = []
 
 router_app = create_agent(
     model=llm_rapido, 
@@ -30,7 +31,7 @@ financeiro_app = create_agent(
 )
 agenda_app = create_agent(
     model=llm_especialista,
-    tools=TOOLS_AGENDA+TOOLS_MEMORIA,
+    tools=TOOLS_AGENDA+TOOLS_GOOGLE+TOOLS_MEMORIA,
     system_prompt=AGENDA_PROMPT_COMPLETO,
 )
 orquestrador_app = create_agent(

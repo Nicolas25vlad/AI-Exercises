@@ -2,3 +2,5 @@
 __pycache__/
 .venv/
 .faq_ingest_metadata.json
+gcp-oauth.keys.json
+google-calendar.token.json
